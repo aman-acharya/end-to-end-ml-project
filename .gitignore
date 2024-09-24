@@ -1,2 +1,4 @@
 mlproject/
 ML_Project.egg-info/
+.vscode/
+logs/
