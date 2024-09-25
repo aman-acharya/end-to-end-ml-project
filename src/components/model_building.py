@@ -9,7 +9,7 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
 from sklearn.metrics import r2_score
-from src.utils import eval_model
+from src.utils import eval_model, save_object
 
 @dataclass
 class ModelBuildingConfig:
@@ -20,10 +20,29 @@ class ModelBuildingConfig:
 
 
 class ModelBuilding:
+    '''
+    This class is responsible for building the models and evaluating their performance.
+    '''
     def __init__(self):
         self.model_building_config = ModelBuildingConfig()
 
     def initiate_model_building(self, train_arr, test_arr):
+        '''
+        This method builds the models and evaluates their performance.
+
+        Args:
+        train_arr: np.ndarray
+            The training data
+        test_arr: np.ndarray
+            The test data
+        
+        Returns:
+        best_model_name: str
+            The name of the best model
+        best_model_score: float
+            The r2 score of the best model
+        '''
+
         try:
             logging.info('Splitting the train and test data')
 
@@ -59,7 +78,22 @@ class ModelBuilding:
 
             best_model_name = list(model_report.keys())[list(model_report.values()).index(best_model_score)]
 
+            best_model = models[best_model_name]
+
+            if best_model_score < 0.7:
+                logging.warning('The best model has an r2 score of less than 0.5. Please consider retraining the model.')
+
             logging.info(f'The best model is {best_model_name} with an r2 score of {best_model_score}')
+
+            save_object(
+                file_path = self.model_building_config.model_file_path,
+                object = models[best_model_name]
+            )
+
+            predicted=best_model.predict(X_test)
+
+            r2_square = r2_score(y_test, predicted)
+            return r2_square
         
         except Exception as e:
             raise CustomException(e, sys)
