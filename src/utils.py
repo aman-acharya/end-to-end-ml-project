@@ -6,6 +6,7 @@ import numpy as np
 import pickle
 from src.logger import logging
 from src.exception import CustomException
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import r2_score
 
 def save_object(file_path, object):
@@ -30,7 +31,7 @@ def save_object(file_path, object):
         raise CustomException(e, sys)
     
 # create a function to evaluate model performance
-def eval_model(X_train, X_test, y_train, y_test, models):
+def eval_model(X_train, X_test, y_train, y_test, models, param):
     '''
     This method evaluates the performance of the models on the test data.
     
@@ -55,6 +56,12 @@ def eval_model(X_train, X_test, y_train, y_test, models):
 
         for i in range(len(list(models))):
             model = list(models.values())[i]
+            params = list(param.values())[i]
+
+            gs = GridSearchCV(model, params, cv=5, n_jobs=-1, verbose=1)
+            gs.fit(X_train, y_train)
+
+            model.set_params(**gs.best_params_)
             model.fit(X_train, y_train)
 
             y_train_pred = model.predict(X_train)

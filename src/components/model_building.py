@@ -4,8 +4,7 @@ from src.logger import logging
 from src.exception import CustomException
 from dataclasses import dataclass
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
-from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor, GradientBoostingRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
 from sklearn.metrics import r2_score
@@ -63,14 +62,49 @@ class ModelBuilding:
                 'Lasso': Lasso(),
                 'Random Forest Regressor' : RandomForestRegressor(),
                 'K-Neighbors Regressor' : KNeighborsRegressor(),
-                'SVM': SVR(),
                 'XGBRegressor': XGBRegressor(),
-                'AdaBoost Regressor': AdaBoostRegressor()
+                'AdaBoost Regressor': AdaBoostRegressor(),
+                'Gradient Boosting Regressor': GradientBoostingRegressor()
             }
+
+            params = {
+                'Linear Regression' : {},
+
+                'Ridge': {'alpha': [0.1, 1, 3, 5, 7, 10]},
+
+                'Lasso': {'alpha': [0.1, 1, 3, 5, 7, 10]},
+
+                'Random Forest Regressor' : {
+                    'n_estimators': [8,16,32,64,128,256], 
+                    'max_depth': [3, 5, 7, 9]
+                    },
+
+                'K-Neighbors Regressor' : {
+                    'n_neighbors': [3, 5, 7, 9]
+                    },
+
+                'XGBRegressor': {
+                    'n_estimators': [8,16,32,64,128,256],
+                    'max_depth': [3, 5, 7, 9],
+                    'learning_rate': [0.01, 0.1, 0.2, 0.3]
+                    },
+
+                'AdaBoost Regressor': {
+                    'n_estimators': [8,16,32,64,128,256],
+                    'learning_rate': [0.01, 0.1, 0.2, 0.3]
+                    },
+
+                'Gradient Boosting Regressor': {
+                    'n_estimators': [8,16,32,64,128,256],
+                    'max_depth': [3, 5, 7, 9],
+                    'learning_rate': [0.01, 0.1, 0.2, 0.3]
+                    }
+            }
+
 
             model_report:dict = eval_model(X_train = X_train, X_test = X_test,
                                             y_train = y_train, y_test = y_test, 
-                                            models = models)
+                                            models = models, param=params)
 
             logging.info('Successfully built the models')
 
