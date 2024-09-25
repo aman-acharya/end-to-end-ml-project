@@ -13,7 +13,7 @@ class TrainPipeline:
     def __init__(self) -> None:
         pass
 
-    def train(self, data_path: str, config: dict):
+    def train(self):
         '''
         This method trains the model based on the input data.
 
@@ -36,3 +36,6 @@ class TrainPipeline:
         except Exception as e:
             raise CustomException(e, sys)
     
+if __name__ == '__main__':
+    pipeline = TrainPipeline()
+    pipeline.train()
