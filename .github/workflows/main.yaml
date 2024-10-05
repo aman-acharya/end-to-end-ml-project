@@ -26,8 +26,8 @@ jobs:
       run: echo "Test cases are running"
 
   build-and-push-ecr-image:
-    needs: integration-test
-    name: Continuous Deployment
+    needs: integration
+    name: Continuous Delivery
     runs-on: ubuntu-latest
 
     steps:
@@ -46,6 +46,10 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
     - name: Build, Tag, and Push Docker Image
       id : build-image
       env:
@@ -62,7 +66,6 @@ jobs:
     needs: build-and-push-ecr-image
     name: Deploy
     runs-on: self-hosted
-    environment: production
 
     steps:
     - name: Checkout
@@ -83,10 +86,10 @@ jobs:
       run: |
         docker pull ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ secrets.ECR_REPOSITORY_NAME }}:latest
 
-    - name: Run the container
+    - name: Run Docker Image to server users
       run: |
         docker run -d -p 8080:8080 --ipc="host" --name studentperformance -e 'AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}' -e 'AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}' -e 'AWS_REGION=${{ secrets.AWS_REGION }}' ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ secrets.ECR_REPOSITORY_NAME }}:latest
 
-    - name: Clean previous container
+    - name: Clean previous image and container
       run: |
         docker system prune -f
