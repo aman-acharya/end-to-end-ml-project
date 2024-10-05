@@ -73,5 +73,6 @@ try:
                 else:
                     st.info(':warning: Please fill all the fields to predict the score.')
 
+
 except Exception as e:
     raise CustomException(e, sys)
