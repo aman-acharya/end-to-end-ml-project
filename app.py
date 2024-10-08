@@ -4,6 +4,7 @@ import sys
 from src.pipelines.predict_pipeline import PredictionPipeline, CustomData
 from src.exception import CustomException
 
+
 # set the page title
 st.markdown("<h1 style='text-align: center;'>Student Performance Prediction</h1>", unsafe_allow_html=True)
 
