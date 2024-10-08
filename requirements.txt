@@ -7,4 +7,5 @@ scikit-learn
 xgboost
 dill
 streamlit
+mlflow
 # -e .

@@ -1,5 +1,6 @@
 import os
 import sys
+from urllib.parse import urlparse
 from src.logger import logging
 from src.exception import CustomException
 from dataclasses import dataclass
@@ -7,8 +8,9 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor, GradientBoostingRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
+import mlflow
 from sklearn.metrics import r2_score
-from src.utils import eval_model, save_object
+from src.utils import eval_model, save_object, save_model_metrics
 
 @dataclass
 class ModelBuildingConfig:
@@ -16,6 +18,8 @@ class ModelBuildingConfig:
     This class holds the configuration for the model building component.
     '''
     model_file_path:str = os.path.join('artifacts', "model.pkl")
+    train_metrics:str = os.path.join('artifacts', "train_metrics.json")
+    test_metrics:str = os.path.join('artifacts', "test_metrics.json")
 
 
 class ModelBuilding:
@@ -101,18 +105,48 @@ class ModelBuilding:
                     }
             }
 
-
-            model_report:dict = eval_model(X_train = X_train, X_test = X_test,
-                                            y_train = y_train, y_test = y_test, 
-                                            models = models, param=params)
-
             logging.info('Successfully built the models')
 
-            best_model_score = max(sorted(model_report.values()))
+            training_metrics, test_metrics = eval_model(X_train, X_test, y_train, y_test, models, params)
+            
+            logging.info(f"Model metrics have been saved successfully at {self.model_building_config.train_metrics} and {self.model_building_config.test_metrics}")
 
-            best_model_name = list(model_report.keys())[list(model_report.values()).index(best_model_score)]
+            # Select the best model based on test accuracy
+            best_model_score = max(test_metrics.values(), key=lambda x: x['r2_score'])['r2_score']
+            best_model_name = max(test_metrics, key=lambda x: test_metrics[x]['r2_score'])
 
             best_model = models[best_model_name]
+
+            logging.info(f"The best model is {best_model_name} with an accuracy score of {best_model_score}")
+
+            logging.info("Tracking the best model using MLflow")
+            actual_model = ""
+            for model in models:
+                if model == best_model_name:
+                    actual_model = actual_model + model
+
+            mlflow.set_registry_uri("https://dagshub.com/ayushach007/end-to-end-ml-project.mlflow")
+            tracking_uri_type = urlparse(mlflow.get_registry_uri()).scheme
+
+            for model_name, model in models.items():
+                with mlflow.start_run(run_name=model_name):
+                    mlflow.log_param("model", model_name)
+                    mlflow.log_param("best parameters", test_metrics[model_name]['best_params'])
+                    mlflow.log_metric("training_r2_score", training_metrics[model_name]['r2_score'])
+                    mlflow.log_metric("training_mae", training_metrics[model_name]['mae'])
+                    mlflow.log_metric("training_mse", training_metrics[model_name]['mse'])
+                    mlflow.log_metric("training_rmse", training_metrics[model_name]['rmse'])
+                    mlflow.log_metric("test_r2_score", test_metrics[model_name]['r2_score'])
+                    mlflow.log_metric("test_mae", test_metrics[model_name]['mae'])
+                    mlflow.log_metric("test_mse", test_metrics[model_name]['mse'])
+                    mlflow.log_metric("test_rmse", test_metrics[model_name]['rmse'])
+                    mlflow.sklearn.log_model(model, "model")
+
+            
+            if tracking_uri_type != "file":
+                mlflow.sklearn.log_model(best_model, "model", registered_model_name=actual_model)
+            else:
+                mlflow.sklearn.log_model(best_model, "model")
 
             if best_model_score < 0.7:
                 logging.warning('The best model has an r2 score of less than 0.5. Please consider retraining the model.')
@@ -123,11 +157,25 @@ class ModelBuilding:
                 file_path = self.model_building_config.model_file_path,
                 object = models[best_model_name]
             )
+            logging.info(f"Model has been saved successfully at {self.model_building_config.model_file_path}")
+
+            # Save model metrics
+            save_model_metrics(
+                report = training_metrics,
+                path = self.model_building_config.train_metrics
+            )
+
+            save_model_metrics(
+                report = test_metrics,
+                path = self.model_building_config.test_metrics
+            )
+
+            logging.info(f"Model metrics have been saved successfully at {self.model_building_config.train_metrics} and {self.model_building_config.test_metrics}")
 
             predicted=best_model.predict(X_test)
 
-            r2_square = r2_score(y_test, predicted)
-            return r2_square
+            r2 = r2_score(y_test, predicted)
+            return r2
         
         except Exception as e:
             raise CustomException(e, sys)

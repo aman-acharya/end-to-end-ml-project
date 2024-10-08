@@ -2,5 +2,7 @@ mlproject/
 ML_Project.egg-info/
 .vscode/
 logs/
-artifacts/
+artifacts/*
+artifacts/*.csv
+!artifacts/data.csv
 __pycache__/
