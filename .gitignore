@@ -5,4 +5,5 @@ logs/
 artifacts/*
 artifacts/*.csv
 !artifacts/data.csv
+!artifacts/*.dvc
 __pycache__/
